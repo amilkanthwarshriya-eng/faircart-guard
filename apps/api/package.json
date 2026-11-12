@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "db:generate": "prisma generate --schema=prisma/schema.prisma",
-    "build": "tsc -p tsconfig.json --outDir dist --noEmit false",
+    "build": "prisma generate --schema=prisma/schema.prisma && tsc -p tsconfig.json --outDir dist --noEmit false",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src tests",
