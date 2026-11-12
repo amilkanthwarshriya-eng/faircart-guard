@@ -1,0 +1,52 @@
+{
+  "name": "@faircart/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FairCart Guard backend core & procurement engine (Member 3)",
+  "main": "dist/server.js",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "db:generate": "prisma generate --schema=prisma/schema.prisma",
+    "build": "tsc -p tsconfig.json --outDir dist --noEmit false",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src tests",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prisma:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:constraints": "prisma db execute --file prisma/sql/approval_active_unique.sql --schema prisma/schema.prisma && prisma db execute --file prisma/sql/payment_one_active_per_approval.sql --schema prisma/schema.prisma",
+    "db:seed": "prisma db seed",
+    "db:reset": "prisma migrate reset --force"
+  },
+  "prisma": { "seed": "tsx prisma/seed.ts" },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "cors": "^2.8.5",
+    "decimal.js": "^10.4.3",
+    "express": "^4.21.0",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "multer": "^2.0.2",
+    "unpdf": "^0.12.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.12.0",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^20.14.0",
+    "@types/supertest": "^6.0.2",
+    "eslint": "^9.12.0",
+    "msw": "^2.4.0",
+    "prisma": "^5.22.0",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.8.0",
+    "vitest": "^2.1.8"
+  }
+}

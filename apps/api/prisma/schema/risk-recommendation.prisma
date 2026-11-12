@@ -1,0 +1,3 @@
+// OWNER: Member 2
+// Models: QuoteRisk, Recommendation
+// Keep relation fields in sync with the other schema files via PR review.

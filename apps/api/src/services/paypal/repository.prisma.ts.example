@@ -1,0 +1,31 @@
+// TEMPLATE (rename to repository.prisma.ts once Member 3's Prisma client exists). Not compiled in the standalone workspace.
+import Decimal from "decimal.js";
+import type { PrismaClient } from "@prisma/client";
+import { ACTIVE_STATUSES, canTransition } from "./state";
+import type { NewPayment, PaymentRepository } from "./repository";
+import type { Payment, PaymentStatus } from "./types";
+
+const toPayment = (r: any): Payment => ({ ...r, amount: new Decimal(r.amount.toString()) });
+
+export class PrismaPaymentRepository implements PaymentRepository {
+  constructor(private prisma: PrismaClient) {}
+  async create(i: NewPayment) { return toPayment(await this.prisma.payment.create({ data: { ...i, amount: i.amount.toFixed(2) } })); }
+  async get(id: string) { const r = await this.prisma.payment.findUnique({ where: { id } }); return r ? toPayment(r) : null; }
+  async findByOrderId(orderId: string) { const r = await this.prisma.payment.findUnique({ where: { paypalOrderId: orderId } }); return r ? toPayment(r) : null; }
+  async findActiveByApproval(approvalId: string) {
+    const r = await this.prisma.payment.findFirst({ where: { approvalId, status: { in: ACTIVE_STATUSES } } });
+    return r ? toPayment(r) : null;
+  }
+  async transition(id: string, from: PaymentStatus[], to: PaymentStatus, patch: Partial<Payment> = {}) {
+    const legal = from.filter((f) => canTransition(f, to));
+    if (legal.length === 0) return null;
+    const { amount: _a, ...rest } = patch as any;
+    // The conditional WHERE is the atomic claim: only one concurrent caller sees count === 1.
+    const res = await this.prisma.payment.updateMany({ where: { id, status: { in: legal } }, data: { ...rest, status: to } });
+    return res.count === 1 ? this.get(id) : null;
+  }
+  async update(id: string, patch: Partial<Payment>) {
+    const { amount: _a, ...rest } = patch as any;
+    return toPayment(await this.prisma.payment.update({ where: { id }, data: rest }));
+  }
+}

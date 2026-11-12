@@ -1,0 +1,11 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: faircart
+      POSTGRES_PASSWORD: faircart
+      POSTGRES_DB: faircart
+    ports: ["5432:5432"]
+    volumes: ["faircart_pg:/var/lib/postgresql/data"]
+volumes:
+  faircart_pg:

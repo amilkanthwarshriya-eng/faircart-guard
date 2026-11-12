@@ -1,0 +1,33 @@
+# OWNER: Member 4. Verify against Render's current Blueprint spec and plan limits before relying on it.
+databases:
+  - name: faircart-db
+    plan: free
+services:
+  - type: web
+    name: faircart-api
+    runtime: node
+    buildCommand: >-
+      npm ci && npm run build -w apps/api &&
+      npx prisma migrate deploy --schema apps/api/prisma/schema
+    startCommand: npm run start -w apps/api
+    healthCheckPath: /health
+    envVars:
+      - { key: DATABASE_URL, fromDatabase: { name: faircart-db, property: connectionString } }
+      - { key: NODE_ENV, value: production }
+      - { key: DEMO_MODE, value: "false" }
+      - { key: PAYPAL_BASE_URL, value: https://api-m.sandbox.paypal.com }
+      - { key: FRONTEND_URL, sync: false }
+      - { key: PAYPAL_CLIENT_ID, sync: false }
+      - { key: PAYPAL_CLIENT_SECRET, sync: false }
+      - { key: PAYPAL_WEBHOOK_ID, sync: false }
+      - { key: LLM_PROVIDER, value: gemini }
+      - { key: GEMINI_API_KEY, sync: false }
+  - type: web
+    name: faircart-web
+    runtime: static
+    buildCommand: npm ci && npm run build -w apps/web
+    staticPublishPath: apps/web/dist
+    envVars:
+      - { key: VITE_API_URL, sync: false }
+    routes:
+      - { type: rewrite, source: /*, destination: /index.html }

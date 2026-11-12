@@ -1,0 +1,35 @@
+// OWNER: Member 4. Foreign keys are plain strings for now; Member 3 may add @relation fields
+// (and the back-relations on PurchaseRequest / Quote / Approval) once those models exist.
+enum PaymentStatus {
+  ORDER_CREATED
+  APPROVAL_PENDING
+  CAPTURING
+  COMPLETED
+  PENDING_REVIEW
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  purchaseRequestId String
+  quoteId           String
+  approvalId        String
+  amount            Decimal       @db.Decimal(12, 2)
+  currency          String
+  status            PaymentStatus @default(ORDER_CREATED)
+  paypalOrderId     String?       @unique
+  paypalCaptureId   String?       @unique
+  approvalUrl       String?
+  rawCaptureStatus  String?
+  failureReason     String?
+  paypalDebugId     String?
+  capturedAt        DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([purchaseRequestId])
+  @@index([approvalId])
+  @@index([status])
+}

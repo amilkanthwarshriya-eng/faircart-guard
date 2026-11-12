@@ -1,0 +1,16 @@
+// OWNER: Member 4
+enum WebhookStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+model WebhookEvent {
+  id               String        @id @default(uuid())
+  paypalEventId    String        @unique
+  eventType        String
+  processingStatus WebhookStatus @default(RECEIVED)
+  receivedAt       DateTime      @default(now())
+  processedAt      DateTime?
+}

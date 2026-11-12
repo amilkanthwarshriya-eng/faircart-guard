@@ -1,0 +1,3 @@
+// OWNER: Member 3
+// Models: Vendor, Quote, QuoteLineItem + status enum
+// Keep relation fields in sync with the other schema files via PR review.

@@ -1,0 +1,35 @@
+@import "tailwindcss";
+:root { --navy:#14284b; --blue:#2563eb; --line:#cbd5e1; font-family: system-ui, sans-serif; color:#1f2937; }
+body { margin:0; }
+nav { display:flex; flex-wrap:wrap; gap:.25rem 1rem; padding:.5rem 1rem; background:var(--navy); }
+nav a { color:#fff; min-height:44px; display:inline-flex; align-items:center; padding:0 .5rem; }
+nav .paypal-logo { height:2rem; width:auto; background:#fff; border-radius:4px; padding:2px 6px; align-self:center; }
+main { max-width:48rem; margin:0 auto; padding:1rem; } main.wide { max-width:70rem; }
+h1 { font-size:1.6rem; font-weight:700; color:var(--navy); margin:.5rem 0 1rem; } h2 { font-size:1.2rem; font-weight:600; margin:1.25rem 0 .5rem; } h3 { font-size:1.05rem; font-weight:600; margin:1rem 0 .5rem; }
+ul { list-style:disc; padding-left:1.25rem; } a { color:#1d4ed8; text-decoration:underline; } dt { font-weight:600; } dd { margin:0 0 .5rem; }
+/* Links styled as buttons: the generic `a` rule above would otherwise override Tailwind's text color. */
+a.button-link { text-decoration:none; color:#fff; } a.button-link.bg-white { color:#1f2937; }
+input[type=checkbox] { display:inline; width:auto; margin-right:.4rem; } input[type=file] { display:block; margin-top:.25rem; }
+label { display:block; margin:.6rem 0; }
+a:focus-visible, .scroll:focus-visible { outline:3px solid var(--blue); outline-offset:2px; }
+.scroll { overflow-x:auto; }
+table { border-collapse:separate; border-spacing:0; width:100%; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+th, td { padding:.4rem .6rem; text-align:left; border-bottom:1px solid var(--line); border-right:1px solid var(--line); }
+th:last-child, td:last-child { border-right:0; }
+table:not(.stack) tbody tr:last-child th, table:not(.stack) tbody tr:last-child td { border-bottom:0; }
+tr.bad { background:#fdecec; }
+blockquote { margin:.3rem 0 .6rem; padding-left:.8rem; border-left:3px solid var(--line); color:#4b5563; }
+.banner { background:#fff6e0; padding:.5rem 1rem; border-bottom:2px solid #e8a317; }
+.field-err { display:block; color:#b91c1c; font-size:.85rem; font-weight:400; }
+.cards { display:flex; gap:.75rem; flex-wrap:wrap; margin:.5rem 0 1rem; }
+.skip { position:absolute; left:-9999px; } .skip:focus { left:.5rem; top:.5rem; z-index:10; background:#fff; color:var(--navy); padding:.5rem .75rem; border:2px solid var(--blue); }
+#main:focus { outline:none; }
+@media (max-width:40rem) {
+  main, main.wide { padding:.75rem; } .cards > * { flex:1 1 40%; }
+  table.stack { border:0; border-radius:0; overflow:visible; }
+  table.stack thead { position:absolute; left:-9999px; }
+  table.stack tr { display:block; border:1px solid var(--line); border-radius:6px; margin-bottom:.75rem; }
+  table.stack td { display:flex; justify-content:space-between; gap:1rem; border:0; border-bottom:1px solid var(--line); }
+  table.stack td::before { content:attr(data-label); font-weight:600; }
+}
+@media print { .noprint, .banner { display:none; } }

@@ -1,0 +1,316 @@
+// FairCart Guard - Member 3 database schema.
+// Money = Decimal(18,4) (never Float). Status enums follow the shared contract (workflow PDF 6.1).
+// Payment and WebhookEvent are provided for Member 4; Member 3 does not implement PayPal logic.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PurchaseRequestStatus {
+  DRAFT
+  COLLECTING_QUOTES
+  ANALYZED
+  AWAITING_APPROVAL
+  APPROVED
+  PAYMENT_IN_PROGRESS
+  PAID
+  PAYMENT_FAILED
+  CANCELLED
+}
+
+enum QuoteStatus {
+  UPLOADED
+  EXTRACTED
+  NEEDS_REVIEW
+  REVIEWED
+  ELIGIBLE
+  INELIGIBLE
+  EXPIRED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  INVALIDATED
+}
+
+enum PaymentStatus {
+  ORDER_CREATED
+  APPROVAL_PENDING
+  CAPTURING
+  COMPLETED
+  PENDING_REVIEW
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum QuoteSource {
+  MANUAL
+  UPLOADED
+}
+
+enum RiskSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+/// Who produced a risk row. DEMO_FIXTURE rows are explicitly labelled demo data.
+enum RiskSource {
+  AI
+  DEMO_FIXTURE
+}
+
+model PurchaseRequest {
+  id           String                @id @default(cuid())
+  title        String
+  description  String?
+  quantity     Int
+  budget       Decimal               @db.Decimal(18, 4)
+  currency     String                @db.VarChar(3)
+  /// Authoritative deadline used by the rules engine (days from createdAt).
+  deadlineDays Int
+  /// Calendar deadline = createdAt + deadlineDays (informational).
+  deadline     DateTime
+  /// JSON string[] of mandatory specifications, e.g. ["Cotton fabric","Custom printing"].
+  requiredSpecs Json                 @default("[]")
+  status       PurchaseRequestStatus @default(DRAFT)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  quotes          Quote[]
+  recommendations Recommendation[]
+  approvals       Approval[]
+  payments        Payment[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Vendor {
+  id        String   @id @default(cuid())
+  name      String
+  /// lower-cased, trimmed name used for de-duplication
+  nameKey   String   @unique
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  quotes Quote[]
+}
+
+model Quote {
+  id        String      @id @default(cuid())
+  requestId String
+  vendorId  String
+  source    QuoteSource @default(MANUAL)
+  status    QuoteStatus @default(UPLOADED)
+  currency  String      @db.VarChar(3)
+
+  product   String?
+  quantity  Int?
+  unitPrice Decimal? @db.Decimal(18, 4)
+
+  subtotal             Decimal? @db.Decimal(18, 4)
+  tax                  Decimal? @db.Decimal(18, 4)
+  shipping             Decimal? @db.Decimal(18, 4)
+  otherFees            Decimal? @db.Decimal(18, 4)
+  otherFeesDescription String?
+  discount             Decimal? @db.Decimal(18, 4)
+  /// Total as STATED by the vendor (untrusted, used only for consistency checks).
+  statedTotal          Decimal? @db.Decimal(18, 4)
+  /// Backend-calculated authoritative total (Subtotal + Tax + Shipping + Fees - Discount).
+  calculatedTotal      Decimal? @db.Decimal(18, 4)
+
+  deliveryDays Int?
+  deliveryDate DateTime?
+  validUntil   DateTime?
+  paymentTerms String?
+
+  /// [{ spec, confirmed, evidence }]
+  specConfirmations Json @default("[]")
+  /// [{ field, reason }]  (QuoteExtraction.uncertainties)
+  uncertainties     Json @default("[]")
+  /// QuoteExtraction.evidence / missingFields payload written by Member 2 (opaque to Member 3).
+  extractionData    Json?
+
+  buyerReviewed  Boolean   @default(false)
+  reviewedAt     DateTime?
+  /// Names of fields the buyer edited/confirmed.
+  reviewedFields Json      @default("[]")
+  /// Set by analyze; cleared whenever the quote is materially edited.
+  analyzedAt     DateTime?
+
+  // Uploaded PDF (stored under UPLOAD_DIR with a random server-generated name)
+  sourceFileName   String?
+  sourceFilePath   String?
+  sourceFileSha256 String?
+  sourceFileSize   Int?
+  sourceMimeType   String?
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  request   PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  vendor    Vendor          @relation(fields: [vendorId], references: [id])
+  lineItems QuoteLineItem[]
+  risks     QuoteRisk[]
+  approvals Approval[]
+  payments  Payment[]
+
+  @@unique([requestId, vendorId])
+  @@index([requestId, status])
+  @@index([vendorId])
+}
+
+model QuoteLineItem {
+  id          String   @id @default(cuid())
+  quoteId     String
+  position    Int      @default(0)
+  description String
+  quantity    Decimal? @db.Decimal(18, 4)
+  unitPrice   Decimal? @db.Decimal(18, 4)
+  lineTotal   Decimal? @db.Decimal(18, 4)
+
+  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId])
+}
+
+model QuoteRisk {
+  id               String       @id @default(cuid())
+  quoteId          String
+  recommendationId String?
+  category         String
+  severity         RiskSeverity
+  title            String
+  description      String
+  /// Exact quotation text backing the risk (Member 2 guarantees it occurs in the source).
+  evidence         String?
+  source           RiskSource   @default(AI)
+  createdAt        DateTime     @default(now())
+
+  quote          Quote           @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  recommendation Recommendation? @relation(fields: [recommendationId], references: [id], onDelete: SetNull)
+
+  @@index([quoteId])
+  @@index([recommendationId])
+}
+
+model Recommendation {
+  id                String   @id @default(cuid())
+  requestId         String
+  winnerQuoteId     String?
+  noEligibleMessage String?
+  weights           Json
+  /// RankedEntry[] (full score breakdown, ranking, disqualification details)
+  ranking           Json
+  /// QuoteEvaluation[] (deterministic rule results per quote)
+  ruleResults       Json
+  explanationText   String?
+  explanationJson   Json?
+  /// OK | UNAVAILABLE | FAILED
+  aiStatus          String   @default("UNAVAILABLE")
+  /// e.g. NONE, DEMO_FIXTURE, gemini:<model>, anthropic:<model>
+  aiSource          String   @default("NONE")
+  aiError           String?
+  createdAt         DateTime @default(now())
+
+  request PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  risks   QuoteRisk[]
+
+  @@index([requestId, createdAt])
+}
+
+model Approval {
+  id                 String         @id @default(cuid())
+  requestId          String
+  quoteId            String
+  /// The ONLY amount PayPal may charge: backend-calculated quote total at approval time.
+  amount             Decimal        @db.Decimal(18, 4)
+  currency           String         @db.VarChar(3)
+  status             ApprovalStatus @default(APPROVED)
+  /// sha256 binding of request + quote identity + amount + currency + quote content
+  fingerprint        String
+  quoteContentHash   String
+  approvedBy         String?
+  approvedAt         DateTime?
+  invalidatedAt      DateTime?
+  invalidationReason String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  request  PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  quote    Quote           @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  // "At most one APPROVED approval per request" is enforced by a partial unique index
+  // (prisma/sql/approval_active_unique.sql) plus a row lock in ApprovalService.
+  @@index([requestId, status])
+  @@index([quoteId])
+  @@index([fingerprint])
+}
+
+/// Contract table for Member 4 (PayPal). Member 3 only reads it for the purchase summary.
+model Payment {
+  id               String        @id @default(cuid())
+  requestId        String
+  purchaseRequestId String?
+  approvalId       String
+  quoteId          String
+  /// Must equal Approval.amount / Approval.currency (verified by Member 4 before and after capture).
+  amount           Decimal       @db.Decimal(18, 4)
+  currency         String        @db.VarChar(3)
+  status           PaymentStatus @default(ORDER_CREATED)
+  paypalOrderId    String?       @unique
+  paypalCaptureId  String?       @unique
+  paypalRawStatus  String?
+  rawCaptureStatus String?
+  approvalUrl      String?
+  failureReason    String?
+  paypalDebugId    String?
+  capturedAt       DateTime?
+  /// Set by the backend once capture status + amount + currency were verified.
+  verifiedAt       DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  request  PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  approval Approval        @relation(fields: [approvalId], references: [id])
+  quote    Quote           @relation(fields: [quoteId], references: [id])
+  webhookEvents WebhookEvent[]
+
+  @@index([requestId])
+  @@index([approvalId])
+  @@index([status])
+}
+
+/// Contract table for Member 4 (webhook idempotency by PayPal event id).
+model WebhookEvent {
+  id                String    @id @default(cuid())
+  paypalEventId     String    @unique
+  eventType         String
+  processingStatus  String?   @default("RECEIVED")
+  resourceType      String?
+  resourceId        String?
+  paymentId         String?
+  payload           Json?
+  signatureVerified Boolean   @default(false)
+  receivedAt        DateTime? @default(now())
+  processedAt       DateTime?
+  processingError   String?
+  createdAt         DateTime  @default(now())
+
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([eventType])
+  @@index([paymentId])
+}
