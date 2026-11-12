@@ -5,7 +5,7 @@ import { CaptureOrderBody, CreateOrderBody, PaymentIdParam } from "@faircart/sha
 import { getPaymentService, PayPalError, PaymentConflictError } from "../services/paypal";
 
 export function fail(e: unknown, res: Response, next: NextFunction) {
-  if (e instanceof ZodError || (e as any)?.name === "ZodError") {
+  if (e instanceof ZodError) {
     const issues = (e as ZodError).issues ?? [];
     return res.status(400).json({
       code: "INVALID_INPUT",

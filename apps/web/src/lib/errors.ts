@@ -5,6 +5,8 @@ const COPY: Record<string, string> = {
   APPROVAL_INVALID: "The approval is no longer valid. Review the quotation and approve again.",
   AMOUNT_MISMATCH: "The amount no longer matches the quotation. Review it and approve again.",
   PAYMENT_EXISTS: "A payment already exists for this purchase. Check its status.",
+  NOT_FOUND: "This payment reference could not be found. Start a new payment from the approved quotation.",
+  NOT_CAPTURABLE: "This payment cannot be captured in its current state. Check its status before trying again.",
   QUOTE_EXPIRED: "This quotation has expired. Request a new quotation.",
   NOT_APPROVED_BY_BUYER: "PayPal has not recorded your approval yet. Return to PayPal to approve.",
   ALREADY_FINAL: "This payment has already been finalised. Showing its current status.",

@@ -8,7 +8,7 @@ export async function handlePayPalWebhook(req: Request, res: Response, next: Nex
     if (!Buffer.isBuffer(raw)) {
       return res.status(400).json({ code: "RAW_BODY_REQUIRED", message: "Mount the webhook route before express.json()" });
     }
-    let event: any;
+    let event: unknown;
     try { event = JSON.parse(raw.toString("utf8")); } catch { return res.status(400).json({ code: "INVALID_JSON", message: "Body is not JSON" }); }
     const needed = ["paypal-transmission-id", "paypal-transmission-time", "paypal-transmission-sig", "paypal-cert-url", "paypal-auth-algo"];
     if (needed.some((h) => !req.headers[h])) {
@@ -17,7 +17,9 @@ export async function handlePayPalWebhook(req: Request, res: Response, next: Nex
     if (!(await verifyPayPalWebhook(req.headers, event))) {
       return res.status(400).json({ code: "INVALID_SIGNATURE", message: "Webhook signature invalid" });
     }
-    const result = await getWebhookProcessor().process(event);
+    const result = await getWebhookProcessor().process(
+      event as Parameters<ReturnType<typeof getWebhookProcessor>["process"]>[0],
+    );
     res.status(200).json({ result });
   } catch (e) { next(e); }
 }

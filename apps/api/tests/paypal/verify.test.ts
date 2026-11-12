@@ -4,7 +4,7 @@ import { verifyPayPalCapture } from "../../src/services/paypal";
 import { captureBody, REQ } from "./mocks";
 
 const exp = { orderId: "ORD1", requestId: REQ, amount: new Decimal("215.00"), currency: "USD" };
-const run = (o = {}) => verifyPayPalCapture(captureBody(o) as any, exp);
+const run = (o = {}) => verifyPayPalCapture(captureBody(o) as Parameters<typeof verifyPayPalCapture>[0], exp);
 
 describe("verifyPayPalCapture (trust gate)", () => {
   it("accepts an exact match", () => expect(run()).toEqual({ kind: "COMPLETED", captureId: "CAP1" }));

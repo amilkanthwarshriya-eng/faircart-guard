@@ -1,11 +1,11 @@
 import Decimal from "decimal.js";
-import type { PrismaClient } from "@prisma/client";
+import type { Payment as PrismaPayment, Prisma, PrismaClient } from "@prisma/client";
 import { ACTIVE_STATUSES, canTransition } from "./state";
 import type { NewPayment, PaymentRepository } from "./repository";
 import type { Payment, PaymentStatus } from "./types";
 import type { WebhookEventStore, WebhookStatus } from "./webhook";
 
-const toPayment = (r: any): Payment => ({
+const toPayment = (r: PrismaPayment): Payment => ({
   id: r.id,
   purchaseRequestId: r.purchaseRequestId ?? r.requestId,
   quoteId: r.quoteId,
@@ -54,7 +54,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
 
   async findActiveByApproval(approvalId: string): Promise<Payment | null> {
     const r = await this.prisma.payment.findFirst({
-      where: { approvalId, status: { in: ACTIVE_STATUSES as unknown as any } },
+      where: { approvalId, status: { in: ACTIVE_STATUSES } },
     });
     return r ? toPayment(r) : null;
   }
@@ -63,7 +63,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
     const legal = from.filter((f) => canTransition(f, to));
     if (legal.length === 0) return null;
 
-    const data: any = { status: to };
+    const data: Prisma.PaymentUpdateManyMutationInput = { status: to };
     if (patch.paypalOrderId !== undefined) data.paypalOrderId = patch.paypalOrderId;
     if (patch.paypalCaptureId !== undefined) data.paypalCaptureId = patch.paypalCaptureId;
     if (patch.approvalUrl !== undefined) data.approvalUrl = patch.approvalUrl;
@@ -87,14 +87,14 @@ export class PrismaPaymentRepository implements PaymentRepository {
     }
 
     const res = await this.prisma.payment.updateMany({
-      where: { id, status: { in: legal as unknown as any } },
+      where: { id, status: { in: legal } },
       data,
     });
     return res.count === 1 ? this.get(id) : null;
   }
 
   async update(id: string, patch: Partial<Payment>): Promise<Payment> {
-    const data: any = {};
+    const data: Prisma.PaymentUpdateInput = {};
     if (patch.paypalOrderId !== undefined) data.paypalOrderId = patch.paypalOrderId;
     if (patch.paypalCaptureId !== undefined) data.paypalCaptureId = patch.paypalCaptureId;
     if (patch.approvalUrl !== undefined) data.approvalUrl = patch.approvalUrl;
@@ -131,8 +131,8 @@ export class PrismaWebhookEventStore implements WebhookEventStore {
         },
       });
       return true;
-    } catch (e: any) {
-      if (e?.code === "P2002") return false;
+    } catch (e: unknown) {
+      if (isPrismaError(e, "P2002")) return false;
       throw e;
     }
   }
@@ -147,5 +147,9 @@ export class PrismaWebhookEventStore implements WebhookEventStore {
       },
     }).catch(() => {});
   }
+}
+
+function isPrismaError(error: unknown, code: string): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === code;
 }
 

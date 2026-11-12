@@ -3,6 +3,8 @@ import type {
   AiAnalysisPort,
   AiAnalysisResult,
   AiRisk,
+  AiRiskCategory,
+  AiRiskSeverity,
 } from '../procurement/integration/aiPort';
 import type { AnalysisContext } from './analysis/types';
 import { agentStepsFromEnv, type AgentSteps } from './agent/steps';
@@ -73,8 +75,8 @@ export class RealAiAnalysisPort implements AiAnalysisPort {
         for (const r of res.risks) {
           risks.push({
             quoteId: q.quoteId,
-            category: r.type as any,
-            severity: r.severity as any,
+            category: r.type as AiRiskCategory,
+            severity: r.severity as AiRiskSeverity,
             title: r.title,
             description: r.detail,
             evidence: r.evidence,
@@ -101,7 +103,7 @@ export class RealAiAnalysisPort implements AiAnalysisPort {
             },
             risks: risks
               .filter((r) => r.quoteId === e.quoteId)
-              .map((r) => ({ type: r.category as any, severity: r.severity, title: r.title })),
+              .map((r) => ({ type: r.category, severity: r.severity, title: r.title })),
           };
         });
 
@@ -135,13 +137,13 @@ export class RealAiAnalysisPort implements AiAnalysisPort {
           json: explanation,
         },
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return {
         status: 'FAILED',
         source: this.steps ? `${this.steps.provider}:${this.steps.model}` : 'ai',
         risks: [],
         explanation: null,
-        error: err.message,
+        error: err instanceof Error ? err.message : String(err),
       };
     }
   }
