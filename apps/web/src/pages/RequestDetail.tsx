@@ -29,7 +29,7 @@ export default function RequestDetail() {
       <Async loading={req.isLoading} error={req.error}>
         <h1>{dash(r?.title)}</h1>
         <p>{r?.quantity} units · budget {r?.budget} {r?.currency} · deadline {dash(r?.deadline)} · status {dash(r?.status)}</p>
-        {Array.isArray(r?.specifications) && <p>Specs: {r.specifications.join(", ")}</p>}
+        {Array.isArray(r?.requiredSpecs ?? r?.specifications) && <p>Specs: {((r?.requiredSpecs ?? r?.specifications) as string[]).join(", ")}</p>}
       </Async>
       <h2>Quotations</h2>
       <Async loading={quotes.isLoading} error={quotes.error}>

@@ -19,8 +19,7 @@ export default function CreateRequest() {
     setErr(null);
     try {
       const r = await api.createRequest({ title: v.title, description: v.description, quantity: Number(v.quantity), budget: v.budget,
-        currency: v.currency.toUpperCase(), deadline: v.deadline, specifications: v.specs.split("\n").map((s) => s.trim()).filter(Boolean),
-        qualityPreferences: v.qualityPreferences || undefined });
+        currency: v.currency.toUpperCase(), deadline: v.deadline, requiredSpecs: v.specs.split("\n").map((s) => s.trim()).filter(Boolean) });
       nav(`/requests/${r.id}`);
     } catch (x) { setErr(friendlyError(x)); }
   });
