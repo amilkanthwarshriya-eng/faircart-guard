@@ -70,7 +70,7 @@ export function createApp(options: AppOptions = {}): Express {
   return app;
 }
 
-// Initialize shared services once.
+// Initialize shared services once for both Vercel and local server usage.
 const prisma = getPrisma();
 
 configurePayments({
@@ -81,7 +81,7 @@ configurePayments({
 
 setAiAnalysisPort(new RealAiAnalysisPort());
 
-// Default export is the Express app (used by Vercel); createApp is a named export.
-const app = createApp();
+// Vercel requires a default-exported request handler/server.
+const app = Object.assign(createApp(), { createApp });
 
 export default app;

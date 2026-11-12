@@ -39,6 +39,13 @@ let db = seed();
 export const resetMock = () => { db = seed(); };
 const findReq = (id: string) => db.requests.find((r) => r.id === id);
 const origin = () => (globalThis as Obj).location?.origin ?? "http://localhost:5173";
+const restoreMockPayment = (id: string) => {
+  if (id !== "MOCK-PAY-1") return null;
+  return (db.payment ??= {
+    id: "MOCK-PAY-1", status: "APPROVAL_PENDING", paypalOrderId: "MOCK-ORDER-1",
+    amount: "17910.00", currency: "INR",
+  });
+};
 
 export const handlers = [
   http.get("*/health", () => HttpResponse.json({ status: "ok", db: "mock", mode: "demo", llmProvider: "mock" })),
@@ -78,13 +85,13 @@ export const handlers = [
     return HttpResponse.json({ paymentId: db.payment.id, status: db.payment.status, approvalUrl: `${origin()}/payments/return?paymentId=${db.payment.id}` }, { status: 201 });
   }),
   http.post("*/api/payments/capture-order", async ({ request }) => {
-    const { paymentId } = (await request.json()) as Obj; const p = db.payment;
+    const { paymentId } = (await request.json()) as Obj; const p = db.payment ?? restoreMockPayment(paymentId);
     if (!p || p.id !== paymentId) return err(404, "NOT_FOUND", "Payment not found");
     if (p.status === "COMPLETED" || p.status === "CANCELLED") return err(409, "ALREADY_FINAL", "Payment already finalised");
     p.status = "CAPTURING"; return HttpResponse.json(p);
   }),
   http.post("*/api/payments/:id/cancel", () => { if (db.payment && db.payment.status !== "COMPLETED") db.payment.status = "CANCELLED"; return HttpResponse.json(db.payment ?? {}); }),
-  http.get("*/api/payments/:id", ({ params }) => { const p = db.payment;
+  http.get("*/api/payments/:id", ({ params }) => { const p = db.payment ?? restoreMockPayment(String(params.id));
     if (!p || p.id !== params.id) return err(404, "NOT_FOUND", "Payment not found");
     if (p.status === "CAPTURING" && ++db.polls >= 2) { p.status = "COMPLETED"; p.paypalCaptureId = "MOCK-CAPTURE-1"; const r = findReq("req-1"); if (r) r.status = "PAID"; }
     return HttpResponse.json(p); }),

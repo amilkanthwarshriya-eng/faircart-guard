@@ -10,7 +10,7 @@ export default function PaymentReturn({ cancelled = false }: { cancelled?: boole
   const paymentId = useSearchParams()[0].get("paymentId");
   const fired = useRef(false);
   const [err, setErr] = useState<string | null>(null);
-  const { data, error } = usePayment(paymentId);
+  const { data, error, refetch } = usePayment(paymentId);
 
   useEffect(() => {
     if (!paymentId || fired.current) return;
@@ -20,6 +20,16 @@ export default function PaymentReturn({ cancelled = false }: { cancelled?: boole
   }, [paymentId, cancelled]);
 
   if (!paymentId) return <main><p>Missing payment reference.</p><Link to="/">Back to dashboard</Link></main>;
+  if (error && !data) {
+    return (
+      <main>
+        <h1>Payment unavailable</h1>
+        <p role="alert">{friendlyError(error)}</p>
+        <p><button type="button" onClick={() => void refetch()}>Try again</button></p>
+        <Link to="/">Back to dashboard</Link>
+      </main>
+    );
+  }
   return (
     <main>
       <h1>Payment status</h1>

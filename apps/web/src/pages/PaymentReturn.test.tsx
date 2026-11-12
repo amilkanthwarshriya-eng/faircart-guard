@@ -27,6 +27,10 @@ describe("Payment return page", () => {
     expect(spy).toHaveBeenCalledTimes(1);
     expect(screen.getByText("MOCK-CAPTURE-1")).toBeTruthy();
   }, 15000);
+  it("restores a mock payment return after a page reload", async () => {
+    renderRoute("/payments/return", "/payments/return?paymentId=MOCK-PAY-1", <PaymentReturn />);
+    expect(await screen.findByText("Payment verified", {}, { timeout: 9000 })).toBeTruthy();
+  }, 15000);
   it("cancel route shows CANCELLED only after the backend says so", async () => {
     await api.approve("req-1", { quoteId: "q-a", approvedAmount: "17910.00", currency: "INR" });
     const order = await api.createOrder("req-1");
