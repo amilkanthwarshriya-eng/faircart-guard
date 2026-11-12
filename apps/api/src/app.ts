@@ -1,4 +1,3 @@
-
 import cors from 'cors';
 import express, { type Express } from 'express';
 import rateLimit from 'express-rate-limit';
@@ -22,7 +21,7 @@ interface AppOptions {
   rateLimit?: boolean;
 }
 
-function createApp(options: AppOptions = {}): Express {
+export function createApp(options: AppOptions = {}): Express {
   const env = getEnv();
   const app = express();
 
@@ -82,7 +81,7 @@ configurePayments({
 
 setAiAnalysisPort(new RealAiAnalysisPort());
 
-// Export the Express application directly for CommonJS/Vercel.
+// Default export is the Express app (used by Vercel); createApp is a named export.
 const app = createApp();
 
-export = app;
+export default app;
